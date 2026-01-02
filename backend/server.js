@@ -18,10 +18,23 @@ app.use('/api/tasks', taskRoutes);
 const path = require('path');
 
 // Database Connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/task-tracker';
-mongoose.connect(MONGODB_URI)
-    .then(() => console.log('MongoDB Connected'))
-    .catch(err => console.log('MongoDB Connection Error:', err));
+const MONGODB_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/task-tracker';
+
+const clientOptions = {
+    serverApi: {
+        version: '1',
+        strict: true,
+        deprecationErrors: true
+    }
+};
+
+mongoose.connect(MONGODB_URI, clientOptions)
+    .then(() => console.log('✅ Pinged your deployment. You successfully connected to MongoDB!'))
+    .catch(err => {
+        console.error('❌ MongoDB Connection Error:');
+        console.error(err.message);
+        process.exit(1);
+    });
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
