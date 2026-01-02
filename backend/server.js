@@ -15,6 +15,11 @@ app.use(express.json());
 const taskRoutes = require('./routes/taskRoutes');
 app.use('/api/tasks', taskRoutes);
 
+// Health check to verify API is live
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
+});
+
 const path = require('path');
 
 // Database Connection
