@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 
 dotenv.config();
 
@@ -15,45 +16,48 @@ app.use(express.json());
 const taskRoutes = require('./routes/taskRoutes');
 app.use('/api/tasks', taskRoutes);
 
-// Health check to verify API is live
+// Health check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
+    res.json({
+        status: 'ok',
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    });
 });
 
-const path = require('path');
+// MongoDB connection
+const MONGODB_URI = process.env.MONGODB_URI;
 
-// Database Connection
-const MONGODB_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/task-tracker';
+if (!MONGODB_URI) {
+    throw new Error('MONGODB_URI is not defined');
+}
 
-const clientOptions = {
-    serverApi: {
-        version: '1',
-        strict: true,
-        deprecationErrors: true
-    }
-};
+// 🔍 MongoDB connection logs (ADDED)
+mongoose.connection.on('connected', () => {
+    console.log('🟢 Mongoose connected to MongoDB Atlas');
+});
 
-mongoose.connect(MONGODB_URI, clientOptions)
-    .then(() => console.log('✅ Pinged your deployment. You successfully connected to MongoDB!'))
-    .catch(err => {
-        console.error('❌ MongoDB Connection Error:');
-        console.error(err.message);
-        process.exit(1);
-    });
+mongoose.connection.on('error', (err) => {
+    console.error('🔴 Mongoose connection error:', err);
+});
 
-// Serve static assets in production
+mongoose.connection.on('disconnected', () => {
+    console.log('🟡 Mongoose disconnected');
+});
+
+// Connect only once (important for Vercel)
+if (mongoose.connection.readyState === 0) {
+    mongoose.connect(MONGODB_URI)
+        .then(() => console.log('✅ MongoDB connection initiated'))
+        .catch(err => console.error('❌ MongoDB connection failed:', err.message));
+}
+
+// Static frontend (optional)
 if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
     app.get('*', (req, res) => {
-        res.sendFile(path.resolve(__dirname, '../', 'frontend', 'dist', 'index.html'));
+        res.sendFile(path.resolve(__dirname, '../frontend/dist/index.html'));
     });
-}
-
-const PORT = process.env.PORT || 5000;
-
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
 module.exports = app;
